@@ -151,8 +151,8 @@ class Office_Dataset(Base_Dataset):
         src_name, tar_name = self.getFilePath(source, target)
         self.source_path = os.path.join(root, src_name)
         self.target_path = os.path.join(root, tar_name)
-        self.class_name = ["back_pack", "bike", "bike_helmet", "bookcase", "bottle",
-                           "calculator", "desk_chair", "desk_lamp", "desktop_computer", "file_cabinet", "unk"]
+        self.class_name = ["back_pack", "bike", "bike_helmet", "calculator", "headphones", "keyboard", 
+                            "laptop_computer", "monitor", "mouse", "mug", "projector", "unk"]
         self.num_class = len(self.class_name)
         self.source_image, self.target_image, self.target_label = self.load_dataset()
         self.alpha = [len(self.source_image[key]) for key in self.source_image.keys()]
@@ -180,20 +180,20 @@ class Office_Dataset(Base_Dataset):
     def getFilePath(self, source, target):
 
         if source == 'A':
-            src_name = 'amazon_src_list.txt'
+            src_name = 'source_amazon_oda.txt'
         elif source == 'W':
-            src_name = 'webcam_src_list.txt'
+            src_name = 'source_webcam_oda.txt'
         elif source == 'D':
-            src_name = 'dslr_src_list.txt'
+            src_name = 'source_dslr_oda.txt'
         else:
             print("Unknown Source Type, only supports A W D.")
 
         if target == 'A':
-            tar_name = 'amazon_tar_list.txt'
+            tar_name = 'target_amazon_oda.txt'
         elif target == 'W':
-            tar_name = 'webcam_tar_list.txt'
+            tar_name = 'target_webcam_oda.txt'
         elif target == 'D':
-            tar_name = 'dslr_tar_list.txt'
+            tar_name = 'target_dslr_oda.txt'
         else:
             print("Unknown Target Type, only supports A W D.")
 

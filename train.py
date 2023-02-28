@@ -19,7 +19,7 @@ if not sys.warnoptions:
     warnings.simplefilter("ignore")
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # data
 from data_loader import Visda_Dataset, Office_Dataset, Home_Dataset, Visda18_Dataset
@@ -48,7 +48,7 @@ def main(args):
         data = Visda_Dataset(root=args.data_dir, partition='train', label_flag=None)
 
     elif args.dataset == 'office':
-        args.data_dir = os.path.join(args.data_dir, 'Office')
+        args.data_dir = os.path.join(args.data_dir, 'office31')
         data = Office_Dataset(root=args.data_dir, partition='train', label_flag=None, source=args.source_name,
                               target=args.target_name)
 
@@ -115,7 +115,7 @@ def set_exp_name(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Progressive Graph Learning for Open-set Domain Adaptation')
     # set up dataset & backbone embedding
-    dataset = 'visda18'
+    dataset = 'office'
     parser.add_argument('--dataset', type=str, default=dataset)
     parser.add_argument('-a', '--arch', type=str, default='res')
     parser.add_argument('--root_path', type=str, default='./utils/', metavar='B',
@@ -124,7 +124,7 @@ if __name__ == '__main__':
     # set up path
     working_dir = os.path.dirname(os.path.abspath(__file__))
     parser.add_argument('--data_dir', type=str, metavar='PATH',
-                        default=os.path.join(working_dir, 'data/'))
+                        default=os.path.join(working_dir, 'txt/'))
     parser.add_argument('--logs_dir', type=str, metavar='PATH',
                         default=os.path.join(working_dir, 'logs'))
     parser.add_argument('--checkpoints_dir', type=str, metavar='PATH',
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_epoch', type=int, default=3)
 
     if dataset == 'office':
-        parser.add_argument('--source_name', type=str, default='D')
+        parser.add_argument('--source_name', type=str, default='A')
         parser.add_argument('--target_name', type=str, default='W')
 
     elif dataset == 'home':
