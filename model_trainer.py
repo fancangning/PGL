@@ -75,16 +75,25 @@ class ModelTrainer():
             print("Epoch {}, current lr {}".format(epoch, lr))
 
     def label2edge(self, targets):
-
+        
+        # targets.size(): [1, 80]
         batch_size, num_sample = targets.size()
+        # print('targets: ', targets)
         target_node_mask = torch.eq(targets, self.num_class).type(torch.bool).cuda()
         source_node_mask = ~target_node_mask & ~torch.eq(targets, self.num_class - 1).type(torch.bool)
-
+        
+        # label_i.size(): [1, 80, 80]
         label_i = targets.unsqueeze(-1).repeat(1, 1, num_sample)
+        # print('label_i.size(): ', label_i.size())
+        # print('label_i: ', label_i)
         label_j = label_i.transpose(1, 2)
+        # print('label_j: ', label_j)
 
         edge = torch.eq(label_i, label_j).float().cuda()
         target_edge_mask = (torch.eq(label_i, self.num_class) + torch.eq(label_j, self.num_class)).type(torch.bool).cuda()
+        # print(torch.eq(label_i, self.num_class))
+        # print(torch.eq(label_j, self.num_class))
+        # print(torch.eq(label_i, self.num_class) + torch.eq(label_j, self.num_class))
         source_edge_mask = ~target_edge_mask
         init_edge = edge*source_edge_mask.float()
 
@@ -131,9 +140,7 @@ class ModelTrainer():
             ]
             args.in_features = 4096
 
-        self.optimizer = torch.optim.Adam(params=param_groups,
-                                          lr=args.lr,
-                                          weight_decay=args.weight_decay)
+        self.optimizer = torch.optim.Adam(params=param_groups, lr=args.lr, weight_decay=args.weight_decay)
         self.model.train()
         self.gnnModel.train()
         self.meter.reset()
@@ -143,31 +150,53 @@ class ModelTrainer():
 
             with tqdm(total=len(train_loader)) as pbar:
                 for i, inputs in enumerate(train_loader):
-
+                    
+                    # images.size(): [4, 20, 3, 244, 244]
+                    # targets.size(): [4, 20]
                     images = Variable(inputs[0], requires_grad=False).cuda()
                     targets = Variable(inputs[1]).cuda()
-
+                    # print('images.size(): ', images.size())
+                    # print('targets.size(): ', targets.size())
+                    # print('targets[0]: ',targets[0])
+                    
+                    # targets_DT.size(): [40]
                     targets_DT = targets[:, args.num_class - 1:].reshape(-1)
+                    # print('targets_DT:', targets_DT.size())
 
                     if self.args.discriminator:
                         domain_label = Variable(inputs[3].float()).cuda()
-
+                    
+                    # targets.size(): [1, 80]
                     targets = self.transform_shape(targets.unsqueeze(-1)).squeeze(-1)
 
-
+                    # print('targets.size(): ', targets.size())
                     init_edge, target_edge_mask, source_edge_mask, target_node_mask, source_node_mask = self.label2edge(targets)
+                    # print('init_edge.size(): ', init_edge.size())
+                    # print('init_edge: ', init_edge)
 
                     # extract backbone features
+                    # images.size(): [4, 20, 3, 244, 244] features.size(): [4, 20, 2048]
                     features = self.model(images)
+                    # print('images.size(): ', images.size())
+                    # print('features.size(): ', features.size())
+                    
                     features = self.transform_shape(features)
 
                     # feed into graph networks
-                    edge_logits, node_logits = self.gnnModel(init_node_feat=features, init_edge_feat=init_edge,
-                                                             target_mask=target_edge_mask)
-
+                    # edge_logits[0].size(): [1, 80, 80] node_logits[0].size(): [1, 80, 10]
+                    edge_logits, node_logits = self.gnnModel(init_node_feat=features, init_edge_feat=init_edge, target_mask=target_edge_mask)
+                    # print('edge_logits.size(): ', edge_logits[0].size())
+                    # print('edge_logits: ', edge_logits)
+                    # print('node_logits.size(): ', node_logits[0].size())
+                    # print('node_logits: ', node_logits)
+                    
                     # compute edge loss
                     full_edge_loss = [self.criterion(edge_logit.masked_select(source_edge_mask), init_edge.masked_select(source_edge_mask)) for edge_logit in edge_logits]
                     norm_node_logits = F.softmax(node_logits[-1], dim=-1)
+                    # print('norm_node_logits.size(): ', norm_node_logits.size())
+                    # print('source_node_mask.size(): ', source_node_mask.size())
+                    # print('source_node_mask: ', source_node_mask)
+                    # print('norm_node_logits[source_node_mask, :].size(): ', norm_node_logits[source_node_mask, :].size())
 
                     if args.loss == 'nll':
                         source_node_loss = self.criterionCE(torch.log(norm_node_logits[source_node_mask, :] + 1e-5),
@@ -187,7 +216,14 @@ class ModelTrainer():
                     if self.args.discriminator:
                         unk_label_mask = torch.eq(targets, args.num_class-1).squeeze()
                         domain_pred = self.discriminator(features)
-                        temp = domain_pred.view(-1)[~unk_label_mask]
+                        # print('domain_pred.size(): ', domain_pred.size())
+                        # print('domain_pred: ', domain_pred)
+                        # print('targets', targets)
+                        # print('~unk_label_mask: ', ~unk_label_mask)
+                        temp = torch.squeeze(domain_pred)[~unk_label_mask]
+                        # print('temp.size(): ', temp.size())
+                        # print('temp: ', temp)
+                        # print(torch.eq(temp, domain_pred[0]))
                         domain_loss = self.criterion(temp, domain_label.view(-1)[~unk_label_mask]) #(targets.size(1) / temp.size(0)) *
                         loss = loss + args.adv_coeff * domain_loss
 
@@ -296,8 +332,12 @@ class ModelTrainer():
                 features = self.transform_shape(features)
                 torch.cuda.empty_cache()
                 # feed into graph networks
-                edge_logits, node_logits = self.gnnModel(init_node_feat=features, init_edge_feat=init_edge,
-                                                         target_mask=target_edge_mask)
+                # edge_logits[0].size(): [1, 80, 80] node_logits[0].size(): [1, 80, 10]
+                edge_logits, node_logits = self.gnnModel(init_node_feat=features, init_edge_feat=init_edge, target_mask=target_edge_mask)
+                # print('edge_logits[0].size(): ', edge_logits[0].size())
+                # print('edge_logits: ', edge_logits)
+                # print('node_logits[0].size(): ', node_logits[0].size())
+                # print('node_logits: ', node_logits)
 
                 del features
                 norm_node_logits = F.softmax(node_logits[-1], dim=-1)
@@ -338,9 +378,15 @@ class ModelTrainer():
 
     def select_top_data(self, pred_score):
         # remark samples if needs pseudo labels based on classification confidence
+        # print('len(pred_score): ', len(pred_score))
+        # print('pred_score: ', pred_score)
         if self.v is None:
             self.v = np.zeros(len(pred_score))
         unselected_idx = np.where(self.v == 0)[0]
+        # print('len(np.where(self.v == 0)): ', len(np.where(self.v == 0)))
+        # print('np.where(self.v == 0): ', np.where(self.v == 0))
+        # print('unselected_idx.shape: ', unselected_idx.shape)
+        # print('unselected_idx: ', unselected_idx)
         if len(unselected_idx) < self.num_to_select:
             self.num_to_select = len(unselected_idx)
         index = np.argsort(-pred_score[unselected_idx])
@@ -355,6 +401,13 @@ class ModelTrainer():
 
     def generate_new_train_data(self, sel_idx, pred_y, real_label):
         # create the new dataset merged with pseudo labels
+        
+        # print('sel_idx: ', sel_idx)
+        # print('pred_y: ', pred_y)
+        # print('real_label: ', real_label)
+        # print(len(sel_idx))
+        # print(len(pred_y))
+        # print(len(real_label))
         assert len(sel_idx) == len(pred_y)
         new_label_flag = []
         pos_correct, pos_total, neg_correct, neg_total = 0, 0, 0, 0

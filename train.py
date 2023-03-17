@@ -8,8 +8,8 @@ import torch
 import matplotlib.pyplot as plt
 from utils.visualization import visualize_TSNE
 
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = True
+# torch.backends.cudnn.deterministic = True
+# torch.backends.cudnn.benchmark = True
 
 
 import sys
@@ -18,8 +18,9 @@ import warnings
 if not sys.warnoptions:
     warnings.simplefilter("ignore")
 
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+# os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"]="0"
+torch.cuda.set_device(0)
 
 # data
 from data_loader import Visda_Dataset, Office_Dataset, Home_Dataset, Visda18_Dataset
@@ -113,42 +114,31 @@ def set_exp_name(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Progressive Graph Learning for Open-set Domain Adaptation')
+    parser = argparse.ArgumentParser(description='Curriculum Graph Learning for Universal Domain Adaptation')
     # set up dataset & backbone embedding
-    dataset = 'office'
-    parser.add_argument('--dataset', type=str, default=dataset)
+    
+    parser.add_argument('--dataset', type=str, default='office')
     parser.add_argument('-a', '--arch', type=str, default='res')
-    parser.add_argument('--root_path', type=str, default='./utils/', metavar='B',
-                        help='root dir')
+    parser.add_argument('--root_path', type=str, default='./utils/', metavar='B', help='root dir')
 
     # set up path
     working_dir = os.path.dirname(os.path.abspath(__file__))
-    parser.add_argument('--data_dir', type=str, metavar='PATH',
-                        default=os.path.join(working_dir, 'txt/'))
-    parser.add_argument('--logs_dir', type=str, metavar='PATH',
-                        default=os.path.join(working_dir, 'logs'))
-    parser.add_argument('--checkpoints_dir', type=str, metavar='PATH',
-                        default=os.path.join(working_dir, 'checkpoints'))
+    parser.add_argument('--data_dir', type=str, metavar='PATH', default=os.path.join(working_dir, 'txt/'))
+    parser.add_argument('--logs_dir', type=str, metavar='PATH', default=os.path.join(working_dir, 'logs'))
+    parser.add_argument('--checkpoints_dir', type=str, metavar='PATH', default=os.path.join(working_dir, 'checkpoints'))
 
     # verbose setting
     parser.add_argument('--log_step', type=int, default=30)
     parser.add_argument('--log_epoch', type=int, default=3)
 
-    if dataset == 'office':
-        parser.add_argument('--source_name', type=str, default='A')
-        parser.add_argument('--target_name', type=str, default='W')
+    parser.add_argument('--source_name', type=str, default='A')
+    parser.add_argument('--target_name', type=str, default='W')
 
-    elif dataset == 'home':
-        parser.add_argument('--source_name', type=str, default='R')
-        parser.add_argument('--target_name', type=str, default='A')
-    else:
-        print("Set a log step first !")
     parser.add_argument('--eval_log_step', type=int, default=100)
     parser.add_argument('--test_interval', type=int, default=1500)
 
     # hyper-parameters
-    parser.add_argument('--seed', type=int, default=1, metavar='S',
-                        help='random seed (default: 1)')
+    parser.add_argument('--seed', type=int, default=1, metavar='S', help='random seed (default: 1)')
 
     parser.add_argument('-b', '--batch_size', type=int, default=4)
     parser.add_argument('--threshold', type=float, default=0.1)
@@ -164,13 +154,14 @@ if __name__ == '__main__':
 
     # GNN parameters
     parser.add_argument('--in_features', type=int, default=2048)
-    if dataset == 'home':
-        parser.add_argument('--node_features', type=int, default=512)
-        parser.add_argument('--edge_features', type=int, default=512)
-    else:
-        parser.add_argument('--node_features', type=int, default=1024)
-        parser.add_argument('--edge_features', type=int, default=1024)
-
+    # if dataset == 'home':
+    #     parser.add_argument('--node_features', type=int, default=512)
+    #     parser.add_argument('--edge_features', type=int, default=512)
+    # else:
+    #     parser.add_argument('--node_features', type=int, default=1024)
+    #     parser.add_argument('--edge_features', type=int, default=1024)
+    parser.add_argument('--node_features', type=int, default=512)
+    parser.add_argument('--edge_features', type=int, default=512)
     parser.add_argument('--num_layers', type=int, default=1)
 
     #tsne

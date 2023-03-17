@@ -3,13 +3,7 @@ import time
 import torch
 import os
 import numpy as np
-try:
-    import tensorboardX as tb
-    from tensorboardX import SummaryWriter
-except ImportError:
-    print("tensorboardX is not installed")
-    tb = None
-
+from torch.utils.tensorboard import SummaryWriter
 
 
 class AverageMeter(object):

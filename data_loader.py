@@ -57,11 +57,15 @@ class Base_Dataset(data.Dataset):
                                and key < self.num_class - 1]
             class_index_target = random.sample(available_index, min(num_class_index_target, len(available_index)))
 
+        # class_index_source + class_index_target = list(set(range(self.num_class - 1)))
         class_index_source = list(set(range(self.num_class - 1)) - set(class_index_target))
         random.shuffle(class_index_source)
 
         for classes in class_index_source:
             # select support samples from source domain or target domain
+            # print('classes:', classes)
+            # print('type(self.source_image[classes]):', type(self.source_image[classes]))
+            # print('len(self.source_image[classes]):', (self.source_image[classes]))
             image = Image.open(random.choice(self.source_image[classes])).convert('RGB')
 
             if self.transformer is not None:
@@ -96,7 +100,8 @@ class Base_Dataset(data.Dataset):
                 if self.transformer is not None:
                     target_image = self.transformer(target_image)
                 image_data.append(target_image)
-                label_data.append(self.label_flag[index])
+                # print('self.label_flag[index]:', self.label_flag[index])
+                label_data.append(self.label_flag[index].item())
                 target_real_label.append(self.target_label[index])
                 domain_label.append(0)
                 ST_split.append(1)
@@ -113,6 +118,7 @@ class Base_Dataset(data.Dataset):
                 domain_label.append(0)
                 ST_split.append(1)
         image_data = torch.stack(image_data)
+        # print('label_data:', label_data)
         label_data = torch.LongTensor(label_data)
         real_label_data = torch.tensor(target_real_label)
         domain_label = torch.tensor(domain_label)
@@ -151,15 +157,18 @@ class Office_Dataset(Base_Dataset):
         src_name, tar_name = self.getFilePath(source, target)
         self.source_path = os.path.join(root, src_name)
         self.target_path = os.path.join(root, tar_name)
-        self.class_name = ["back_pack", "bike", "bike_helmet", "calculator", "headphones", "keyboard", 
+        self.class_name = ["back_pack", "bike", "calculator", "headphones", "keyboard", 
                             "laptop_computer", "monitor", "mouse", "mug", "projector", "unk"]
         self.num_class = len(self.class_name)
+        # self.source_image is a dict, and self.target_image and self.target_label are lists.
         self.source_image, self.target_image, self.target_label = self.load_dataset()
         self.alpha = [len(self.source_image[key]) for key in self.source_image.keys()]
         self.label_flag = label_flag
-
+        
+        # print('label_flag: ', label_flag)
         # create the unlabeled tag
         if self.label_flag is None:
+            # self.label_flag initialization [11, 11, 11, ...]
             self.label_flag = torch.ones(len(self.target_image)) * self.num_class
 
         else:
